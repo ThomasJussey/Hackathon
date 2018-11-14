@@ -19,7 +19,7 @@ debut = time.time()
 
 
 def main(args) :
-    print ('#######################\n# LNet Neural Network #\n#######################\n')
+    print ('##########################\n# AlexNet Neural Network #\n##########################\n')
 
     #######################
     # Loading of the data #
@@ -82,15 +82,15 @@ def main(args) :
     left_input = Input((size,size,dim))
     right_input = Input((size,size,dim))
 
-    # We will use 2 instances of 1 LNet network for this task
+    # We will use 2 instances of 1 AlexNet network for this task
     convnet = Sequential([
-        Conv2D(8,3,activation='relu',input_shape=(32,32,1)),
+        Conv2D(5,3,activation='relu',input_shape=(size,size,dim)),
         MaxPooling2D(),
-        Conv2D(16,3,activation='relu'),
+        Conv2D(5,3,activation='relu'),
         MaxPooling2D(),
-        Conv2D(32,2,activation='relu'),
+        Conv2D(7,2,activation='relu'),
         MaxPooling2D(),
-        Conv2D(64,2,activation='relu'),
+        Conv2D(7,2,activation='relu'),
         Flatten(),
         Dense(18, activation="sigmoid"),
     ])
@@ -121,7 +121,7 @@ def main(args) :
     siamese_net.fit([left_data,right_data], Y_train,
             batch_size=16,
             epochs=args.epochs,
-            verbose=2,
+            verbose=1,
             validation_data=([validation_left,validation_right],Y_val),
             shuffle=args.shuffle,
             callbacks=[tensorboard])
