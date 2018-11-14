@@ -17,6 +17,7 @@ import time
 
 debut = time.time()
 
+
 def main(args) :
     print ('#######################\n# LNet Neural Network #\n#######################\n')
 
@@ -24,7 +25,7 @@ def main(args) :
     # Loading of the data #
     #######################
 
-    #Training Data  
+    #Training Data
 
     print ('Loading of the training data...')
 
@@ -63,14 +64,15 @@ def main(args) :
     ##################################
 
     #Tensoboard initalization
-    path = time.asctime()
+    date = time.asctime()
+    path = args.logdir + "Logs " + date
+    reformedPath = path.replace(":", " ")
+    try:
+        os.mkdir(reformedPath)
+    except OSError:
+        print ("Creation of the logs directory %s failed" % reformedPath)
 
-    try:  
-        os.mkdir(args.logdir + "Logs " + path)
-    except OSError:  
-        print ("Creation of the logs directory %s failed" % path)
-
-    tensorboard = TensorBoard(log_dir=args.logdir + "/Logs " + path, histogram_freq=0,
+    tensorboard = TensorBoard(log_dir=reformedPath, histogram_freq=0,
                               write_graph=True, write_images=True)
 
 
@@ -82,13 +84,13 @@ def main(args) :
 
     # We will use 2 instances of 1 LNet network for this task
     convnet = Sequential([
-        Conv2D(5,3,activation='relu',input_shape=(32,32,1)),
+        Conv2D(8,3,activation='relu',input_shape=(32,32,1)),
         MaxPooling2D(),
-        Conv2D(5,3,activation='relu'),
+        Conv2D(16,3,activation='relu'),
         MaxPooling2D(),
-        Conv2D(7,2,activation='relu'),
+        Conv2D(32,2,activation='relu'),
         MaxPooling2D(),
-        Conv2D(7,2,activation='relu'),
+        Conv2D(64,2,activation='relu'),
         Flatten(),
         Dense(18, activation="sigmoid"),
     ])
@@ -130,7 +132,7 @@ def main(args) :
 
 def parse_arguments(argv):
     parser = argparse.ArgumentParser()
-    
+
     parser.add_argument('--data_dir', type=str, help='Directory with the training and the validation sets.', default='../Data/data_2000/')
     parser.add_argument('--image_size', type=int,
         help='Image size (height, width) in pixels.', default=32)
@@ -138,7 +140,7 @@ def parse_arguments(argv):
         help='Image dimension (colors) 1 for black and white and 3 for rgb.', default=1)
     parser.add_argument('--epochs', type=int,
         help='Number of epochs.', default=30)
-    parser.add_argument('--shuffle', 
+    parser.add_argument('--shuffle',
         help='Shuffle the datasets at each epoch.', action='store_true')
     parser.add_argument('--logdir', type=str,
         help='Directory in which the logs are saved.', default="../logs/")
