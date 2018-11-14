@@ -4,12 +4,15 @@ from keras.regularizers import l2
 from keras import backend as K
 from keras.optimizers import SGD,Adam
 from keras.losses import binary_crossentropy
+from keras.callbacks import TensorBoard
 import numpy.random as rng
 import numpy as np
 import os
 import dill as pickle
+import tensorflow as tf
 from sklearn.utils import shuffle
 import time
+
 debut = time.time()
 
 print ('#######################\n# LNet Neural Network #\n#######################\n')
@@ -52,6 +55,10 @@ for i in range(n):
 
 print ('Done.\nThere are {} examples for validation.\n'.format(Y_val.shape[0]))
 
+#Tensoboard initalization
+tensorboard = TensorBoard(log_dir='../logs', histogram_freq=0,
+          write_graph=True, write_images=True)
+
 # We have 2 inputs, 1 for each picture, we are currently working with Black and White images in 32x32 pixels.
 left_input = Input((32,32,1))
 right_input = Input((32,32,1))
@@ -87,14 +94,17 @@ optimizer = Adam(0.001, decay=2.5e-4)
 #//TODO: get layerwise learning rates and momentum annealing scheme described in paperworking
 siamese_net.compile(loss="binary_crossentropy",optimizer=optimizer,metrics=['accuracy'])
 
+# Tensorboard
+
 # Training and validation
 siamese_net.summary()
 siamese_net.fit([left_data,right_data], Y_train,
           batch_size=16,
-          epochs=10,
+          epochs=100,
           verbose=2,
           validation_data=([validation_left,validation_right],Y_val),
-          shuffle=True)
+          shuffle=True,
+          callbacks=[tensorboard])
 
 fin = time.time()
 print("Temps : %f sec" %(fin - debut))
