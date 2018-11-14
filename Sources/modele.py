@@ -63,7 +63,14 @@ def main(args) :
     ##################################
 
     #Tensoboard initalization
-    tensorboard = TensorBoard(log_dir='../logs', histogram_freq=0,
+    path = time.asctime()
+
+    try:  
+        os.mkdir(args.logdir + "Logs " + path)
+    except OSError:  
+        print ("Creation of the logs directory %s failed" % path)
+
+    tensorboard = TensorBoard(log_dir=args.logdir + "/Logs " + path, histogram_freq=0,
                               write_graph=True, write_images=True)
 
 
@@ -133,6 +140,8 @@ def parse_arguments(argv):
         help='Number of epochs.', default=30)
     parser.add_argument('--shuffle', 
         help='Shuffle the datasets at each epoch.', action='store_true')
+    parser.add_argument('--logdir', type=str,
+        help='Directory in which the logs are saved.', default="../logs/")
     return parser.parse_args(argv)
 
 if __name__ == '__main__':
