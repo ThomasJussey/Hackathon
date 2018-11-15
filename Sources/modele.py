@@ -14,6 +14,7 @@ import dill as pickle
 import tensorflow as tf
 from sklearn.utils import shuffle
 import time
+import preprocess as p
 
 debut = time.time()
 
@@ -25,39 +26,22 @@ def main(args) :
     # Loading of the data #
     #######################
 
-    #Training Data
-
     print ('Loading of the training data...')
 
     X_train = pickle.load( open(  args.data_dir + "X_train.p", "rb" ))
     Y_train = pickle.load( open(  args.data_dir + "y_train.p", "rb" ))
-
-    left_data = []
-    right_data = []
-
-    n = len(X_train)
-    for i in range(n) :
-        left_data.append(X_train[i][0])
-        right_data.append(X_train[i][1])
-
-    print ('Done.\nThere are {} examples for training.\n'.format(Y_train.shape[0]))
-
-    # Validation data
 
     print ('Loading of the validation data...')
 
     X_val = pickle.load( open( args.data_dir + "X_val.p", "rb" ))
     Y_val = pickle.load( open(  args.data_dir + "y_val.p", "rb" ))
 
-    validation_left = []
-    validation_right = []
+    #######################
+    # Preprocessing Data  #
+    #######################
 
-    n = len(X_val)
-    for i in range(n):
-        validation_left.append(X_val[i][0])
-        validation_right.append(X_val[i][1])
+    left_data, right_data, validation_left, validation_right = p.process_data(X_train, Y_train, X_val, Y_val, 0)
 
-    print ('Done.\nThere are {} examples for validation.\n'.format(Y_val.shape[0]))
 
     ##################################
     # Creation of the Neural Network #
@@ -104,6 +88,7 @@ def main(args) :
     L1_layer = Lambda(lambda tensor:K.abs(tensor[0] - tensor[1]))
 
     # Add the distance function to the network
+
     L1_distance = L1_layer([encoded_l, encoded_r])
 
     prediction = Dense(1,activation='sigmoid')(L1_distance)
@@ -122,11 +107,11 @@ def main(args) :
 
     siamese_net.summary()
     siamese_net.fit([left_data,right_data], Y_train,
-            batch_size=16,
-            epochs=args.epochs,
+            batch_size=20,
+            epochs=100,
             verbose=1,
             validation_data=([validation_left,validation_right],Y_val),
-            shuffle=args.shuffle,
+            shuffle= 'true', #args.shuffle,
             callbacks=[tensorboard])
 
     fin = time.time()
