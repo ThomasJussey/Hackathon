@@ -109,8 +109,11 @@ def main(args) :
     prediction = Dense(1,activation='sigmoid')(L1_distance)
     siamese_net = Model(inputs=[left_input,right_input],outputs=prediction)
 
-    optimizer = Adam(0.001, decay=2.5e-4)
+    #Optimiseur : Pour compiler en Keras / https://keras.io/optimizers/ https://towardsdatascience.com/neural-network-optimization-algorithms-1a44c282f61d :
+    optimizer = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-8, decay=2.5e-5) # avant : 0.001, decay=2.5e-4)
+    #optimizer = SGD(lr=0.01, momentum=0.0, decay=2.5e-4, nesterov=False)
     #//TODO: get layerwise learning rates and momentum annealing scheme described in paperworking
+    #loss : https://keras.io/losses/
     siamese_net.compile(loss="binary_crossentropy",optimizer=optimizer,metrics=['accuracy'])
 
     ###########################
