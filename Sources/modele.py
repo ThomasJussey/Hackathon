@@ -1,4 +1,4 @@
-from keras.layers import Input, Conv2D, Lambda, merge, Dense, Flatten,MaxPooling2D
+from keras.layers import Input, Conv2D, Lambda, merge, Dense, Flatten,MaxPooling2D, Dropout, Activation
 from keras.models import Model, Sequential
 from keras.regularizers import l2
 from keras import backend as K
@@ -81,18 +81,14 @@ def main(args) :
     dim = args.image_dim
     left_input = Input((size,size,dim))
     right_input = Input((size,size,dim))
+    input_shape = (32, 32, 1)
 
     # We will use 2 instances of 1 LNet network for this task
     convnet = Sequential([
-        Conv2D(8,3,activation='relu',input_shape=(32,32,1)),
-        MaxPooling2D(),
-        Conv2D(16,3,activation='relu'),
-        MaxPooling2D(),
-        Conv2D(32,2,activation='relu'),
-        MaxPooling2D(),
-        Conv2D(64,2,activation='relu'),
+        Conv2D(32, kernel_size=(3, 3), input_shape=input_shape),
+        Activation('relu'),
+        MaxPooling2D(pool_size=(2, 2)),
         Flatten(),
-        Dense(18, activation="sigmoid"),
     ])
 
     # Connect each 'leg' of the network to each input
@@ -100,18 +96,15 @@ def main(args) :
     encoded_l = convnet(left_input)
     encoded_r = convnet(right_input)
 
-    # Getting the L1 Distance between the 2 encodings
-    L1_layer = Lambda(lambda tensor:K.abs(tensor[0] - tensor[1]))
+    L1_distance = lambda x: K.abs(x[0]-x[1])
+    both = merge([encoded_l,encoded_r], mode = L1_distance, output_shape=lambda x: x[0])
+    prediction = Dense(1,activation='sigmoid',bias_initializer=b_init)(both)
+    siamese_net = Model(input=[left_input,right_input],output=prediction)
+    #optimizer = SGD(0.0004,momentum=0.6,nesterov=True,decay=0.0003)
 
-    # Add the distance function to the network
-    L1_distance = L1_layer([encoded_l, encoded_r])
-
-    prediction = Dense(1,activation='sigmoid')(L1_distance)
-    siamese_net = Model(inputs=[left_input,right_input],outputs=prediction)
-
-    optimizer = Adam(0.001, decay=2.5e-4)
+    optimizer = Adam(0.00006)
     #//TODO: get layerwise learning rates and momentum annealing scheme described in paperworking
-    siamese_net.compile(loss="binary_crossentropy",optimizer=optimizer,metrics=['accuracy'])
+    siamese_net.compile(loss="binary_crossentropy",optimizer=optimizer)
 
     ###########################
     # Training and validation #
@@ -121,7 +114,7 @@ def main(args) :
     siamese_net.fit([left_data,right_data], Y_train,
             batch_size=16,
             epochs=args.epochs,
-            verbose=2,
+            verbose=1,
             validation_data=([validation_left,validation_right],Y_val),
             shuffle=args.shuffle,
             callbacks=[tensorboard])
