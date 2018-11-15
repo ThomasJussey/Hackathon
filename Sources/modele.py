@@ -1,4 +1,4 @@
-from keras.layers import Input, Conv2D, Lambda, merge, Dense, Flatten,MaxPooling2D, Dropout, Activation
+from keras.layers import Input, Conv2D, Lambda, merge, Dense, Flatten,MaxPooling2D, Concatenate, Dropout, BatchNormalization
 from keras.models import Model, Sequential
 from keras.regularizers import l2
 from keras import backend as K
@@ -19,7 +19,7 @@ debut = time.time()
 
 
 def main(args) :
-    print ('#######################\n# LNet Neural Network #\n#######################\n')
+    print ('##########################\n# AlexNet Neural Network #\n##########################\n')
 
     #######################
     # Loading of the data #
@@ -29,8 +29,8 @@ def main(args) :
 
     print ('Loading of the training data...')
 
-    X_train = pickle.load( open(  args.data_dir + "X_train.p", "rb" ))
-    Y_train = pickle.load( open(  args.data_dir + "y_train.p", "rb" ))
+    X_train = pickle.load( open("../Data/data_39212/X_train.p", "rb" ))
+    Y_train = pickle.load( open("../Data/data_39212/y_train.p", "rb" ))
 
     left_data = []
     right_data = []
@@ -47,7 +47,7 @@ def main(args) :
     print ('Loading of the validation data...')
 
     X_val = pickle.load( open( args.data_dir + "X_val.p", "rb" ))
-    Y_val = pickle.load( open(  args.data_dir + "y_val.p", "rb" ))
+    Y_val = pickle.load( open( args.data_dir + "y_val.p", "rb" ))
 
     validation_left = []
     validation_right = []
@@ -81,14 +81,20 @@ def main(args) :
     dim = args.image_dim
     left_input = Input((size,size,dim))
     right_input = Input((size,size,dim))
-    input_shape = (32, 32, 1)
 
-    # We will use 2 instances of 1 LNet network for this task
+    # We will use 2 instances of 1 AlexNet network for this task
     convnet = Sequential([
-        Conv2D(32, kernel_size=(3, 3), input_shape=input_shape),
-        Activation('relu'),
-        MaxPooling2D(pool_size=(2, 2)),
-        Flatten(),
+        Conv2D(32,(3,3),activation='relu',input_shape=(size,size,dim)),
+        Conv2D(32,(3,3),activation='relu'),
+        MaxPooling2D(),
+        Dropout(0.2),
+        Conv2D(64,(3,3),activation='relu'),
+        Conv2D(64,(3,3),activation='relu'),
+        MaxPooling2D(),
+        Conv2D(128,(3,3),activation='relu'),
+        Conv2D(128,(3,3),activation='relu'),
+        Dropout(0.2),
+        Flatten()
     ])
 
     # Connect each 'leg' of the network to each input
@@ -96,15 +102,23 @@ def main(args) :
     encoded_l = convnet(left_input)
     encoded_r = convnet(right_input)
 
-    L1_distance = lambda x: K.abs(x[0]-x[1])
-    both = merge([encoded_l,encoded_r], mode = L1_distance, output_shape=lambda x: x[0])
-    prediction = Dense(1,activation='sigmoid',bias_initializer=b_init)(both)
-    siamese_net = Model(input=[left_input,right_input],output=prediction)
-    #optimizer = SGD(0.0004,momentum=0.6,nesterov=True,decay=0.0003)
+    # Getting the L1 Distance between the 2 encodings
+    L1_layer = Lambda(lambda tensor:K.abs(tensor[0] - tensor[1]))
 
-    optimizer = Adam(0.00006)
+    # Add the distance function to the network
+    L1_distance = L1_layer([encoded_l, encoded_r])
+
+    #Réseau fortement connecté
+    prediction = Dense(1,activation='sigmoid')(L1_distance)
+
+    siamese_net = Model(inputs=[left_input,right_input],outputs=prediction)
+
+    #Optimiseur : Pour compiler en Keras / https://keras.io/optimizers/ https://towardsdatascience.com/neural-network-optimization-algorithms-1a44c282f61d :
+    optimizer = Adam(0.001, decay=2.5e-4) # avant : 0.001, decay=2.5e-4)
+    #optimizer = SGD(lr=0.01, momentum=0.0, decay=2.5e-4, nesterov=False)
     #//TODO: get layerwise learning rates and momentum annealing scheme described in paperworking
-    siamese_net.compile(loss="binary_crossentropy",optimizer=optimizer)
+    #loss : https://keras.io/losses/
+    siamese_net.compile(loss="binary_crossentropy",optimizer=optimizer,metrics=['accuracy'])
 
     ###########################
     # Training and validation #
@@ -112,15 +126,18 @@ def main(args) :
 
     siamese_net.summary()
     siamese_net.fit([left_data,right_data], Y_train,
-            batch_size=16,
+            batch_size=128,
             epochs=args.epochs,
             verbose=1,
             validation_data=([validation_left,validation_right],Y_val),
             shuffle=args.shuffle,
             callbacks=[tensorboard])
 
-    fin = time.time()
-    print("Temps : %f sec" %(fin - debut))
+    #Sauvegarde du modèle
+    date = time.asctime()
+    path = "Model " + date
+    reformedPath = path.replace(":", " ")
+    siamese_net.save('../Models/'+reformedPath+".h5")
 
 
 def parse_arguments(argv):
